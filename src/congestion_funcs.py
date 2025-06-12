@@ -1,3 +1,4 @@
+# Packages
 import time
 import numpy as np
 import pandas as pd
@@ -7,6 +8,7 @@ from datetime import datetime
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.stats import pearsonr
 
+# Project imports
 from c_benchmark import Benchmark
 
 

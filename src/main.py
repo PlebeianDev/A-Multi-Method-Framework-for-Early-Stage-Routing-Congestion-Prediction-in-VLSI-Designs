@@ -1,17 +1,20 @@
+# Packages
 import os
 
+# Project imports
 from c_benchmark import Benchmark
 from congestion_funcs import *
 
 
 def main():
-    path = "/home/plebeiandev/Documents/Benchmarks/Bookshelf_ISPD/ibm01"
+    path = "/home/plebeiandev/Documents/Benchmarks/Bookshelf_ISPD/adaptec3_eplace_placed_and_legalized"
     d = Benchmark(path)
     d.generate_benchmark()
     
     log_dir = "logs"
     os.makedirs(log_dir, exist_ok=True)
     log_file = setup_logging(log_dir)
+    print(f'Design: {d.name}')
 
     try:
         estimator = CongestionEstimator(d, grid_size=500)

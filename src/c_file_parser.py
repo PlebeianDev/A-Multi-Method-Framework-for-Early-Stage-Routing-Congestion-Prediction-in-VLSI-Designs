@@ -4,6 +4,10 @@ import os
 class FParser:
     def __init__(self, folder_path: str):
         dname = os.path.basename(folder_path)
+        if "_" in dname:
+            dname = dname.split("_")
+            dname = dname[0]
+
         self.plfile = f"{folder_path}/{dname}.pl"
         self.nodesfile = f"{folder_path}/{dname}.nodes"
         self.netsfile = f"{folder_path}/{dname}.nets"
@@ -21,13 +25,17 @@ class FParser:
             parts = line.split()
             if 'pl' in parts:
                 continue
+            elif len(parts) == 3:
+                name, x, y = parts
+                cells[name] = [float(x), float(y), None]
             if len(parts) == 5:
                 parts.remove(':')
                 name, x, y, orient = parts
                 cells[name] = [float(x), float(y), orient]
-            elif len(parts) == 3:
-                name, x, y = parts
-                cells[name] = [float(x), float(y), None]
+            if len(parts) == 6:
+                parts.remove(':')
+                name, x, y, orient, movetype = parts
+                cells[name] = [float(x), float(y), orient]
 
         with open(self.nodesfile, 'r') as file:
             lines = file.readlines()
@@ -46,7 +54,7 @@ class FParser:
                     cells[parts[0]].append("terminal")
 
         if numnodes != len(cells.keys()):
-            print(cells.keys())
+            # print(cells.keys())
             print(numnodes, len(cells.keys()))
             print(f"Error: number of cells in file, different from extracted data")
             exit(1)
