@@ -1,5 +1,11 @@
 import time
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import sys
+from datetime import datetime
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.stats import pearsonr
 
 from c_benchmark import Benchmark
 
@@ -139,5 +145,143 @@ class CongestionEstimator:
         # Calculate max values for normalization
         max_values = {
             'pin': max(c['pin_density'] for row in self.routing_grid['cells'] for c in row) or 1,
-            'standard': 
+            'standard': max(c['net_demand_standard'] for row in self.routing_grid['cells'] for c in row) or 1,
+            'weighted': max(c['net_demand_weighted'] for row in self.routing_grid['cells'] for c in row) or 1,
+            'rents': max(c['rent_demand'] for row in self.routing_grid['cells'] for c in row) or 1,
+            'span': max(c['span_demand'] for row in self.routing_grid['cells'] for c in row) or 1
         }
+
+        methods = {
+            'standard': 'net_demand_standard',
+            'weighted': 'net_demand_weighted',
+            'rents': 'rent_demand',
+            'span': 'span_demand'
+        }
+
+        """
+        TODOS: 
+        1. see if the fix values must be altered later for experimentation
+        2. Might provide error, see cells and dictionaries accordingly
+        """
+        for name, demand_key in methods.items():
+            congestion_map = {
+                **self.routing_grid,
+                'cells':[[{
+                    **cell,
+                    'congestion': 0.6 * (cell[demand_key] / max_values[name]) +
+                                  0.4 * (cell['pin_density'] / max_values['pin'])
+                } for cell in row] for row in self.routing_grid['cells']]
+            }
+            self.congestion_maps[name] = congestion_map
+        
+        return self.congestion_maps
+    
+
+class CongestionVisualizer:
+    def __init__(self, design_data):
+        self.design = design_data
+        self.cmap = LinearSegmentedColormap.from_list(
+            'congestion', ['green', 'yellow', 'red']
+        )
+
+    def plot_4way_comparison(self, maps):
+        """4-way comparison of all methods"""
+        plt.figure(figsize=(16,12))
+        titles = [
+            "Standard (Uniform Nets)",
+            "Fanout-Weighted",
+            "Rent's Rule",
+            "Net Span"
+        ]
+
+        for i, (method, title) in enumerate(zip(maps.keys(), titles), 1):
+            plt.subplot(2,2,i)
+            self._plot_single_map(maps[method])
+            plt.title(title)
+
+        plt.tight_layout()
+        plt.show()
+    
+    def _plot_single_map(self, congestion_map):
+        """Plot single congestion map"""
+        rows = congestion_map['y_bins']
+        cols = congestion_map['x_bins']
+        data = np.zeros((rows, cols))
+        
+        for x in range(cols):
+            for y in range(rows):
+                data[y, x] = congestion_map['cells'][x][y]['congestion']
+        
+        plt.imshow(data, cmap=self.cmap, aspect='auto',
+                  extent=[0, cols*congestion_map['grid_size'], 
+                         0, rows*congestion_map['grid_size']],
+                  origin='lower', vmin=0, vmax=1)
+        plt.colorbar(label='Congestion Level')
+        plt.xlabel('X Position (μm)')
+        plt.ylabel('Y Position (μm)')
+        plt.grid(True, alpha=0.3)
+
+    
+class CongestionAnalyzer:
+    def __init__(self, congestion_maps, runtimes):
+        self.maps = congestion_maps
+        self.runtimes = runtimes
+    
+    def generate_comparison_report(self):
+        """Generate comprehensive comparison metrics"""
+        metrics = []
+        
+        for method, cmap in self.maps.items():
+            congestion_vals = [c['congestion'] for row in cmap['cells'] for c in row]
+            metrics.append({
+                'Method': method,
+                'Runtime (s)': self.runtimes.get(method, 0),
+                'Max Congestion': max(congestion_vals),
+                'Mean Congestion': np.mean(congestion_vals),
+                'Std Dev': np.std(congestion_vals),
+                'Hotspots (>0.8)': sum(c > 0.8 for c in congestion_vals),
+                'Hotspots (>0.9)': sum(c > 0.9 for c in congestion_vals)
+            })
+        
+        df = pd.DataFrame(metrics)
+        
+        # Add correlation matrix
+        corr_matrix = np.zeros((len(self.maps), len(self.maps)))
+        methods = list(self.maps.keys())
+        for i, m1 in enumerate(methods):
+            for j, m2 in enumerate(methods):
+                vals1 = [c['congestion'] for row in self.maps[m1]['cells'] for c in row]
+                vals2 = [c['congestion'] for row in self.maps[m2]['cells'] for c in row]
+                corr_matrix[i,j] = pearsonr(vals1, vals2)[0]
+        
+        corr_df = pd.DataFrame(corr_matrix, index=methods, columns=methods)
+        
+        return {
+            'metrics': df,
+            'correlation': corr_df
+        }
+        
+def setup_logging(log_file_path):
+    """Redirect stdout and stderr to a log file"""
+    class Logger(object):
+        def __init__(self, filename):
+            self.terminal = sys.stdout
+            self.log = open(filename, "a")
+
+        def write(self, message):
+            self.terminal.write(message)
+            self.log.write(message)
+
+        def flush(self):
+            pass
+
+    # Create log file with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = f"{log_file_path}/congestion_analysis_{timestamp}.log"
+    
+    sys.stdout = Logger(log_file)
+    sys.stderr = sys.stdout  # Redirect stderr to the same file
+    
+    print(f"Logging initialized at {datetime.now()}")
+    print(f"Log file: {log_file}")
+    return log_file
