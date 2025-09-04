@@ -67,7 +67,7 @@ TBA
 
 ## License
 
-This project is licensed under the GNU GENERAL PUBLIC LICENSE Version 3. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU GENERAL PUBLIC LICENSE Version 2. See the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgements
 
