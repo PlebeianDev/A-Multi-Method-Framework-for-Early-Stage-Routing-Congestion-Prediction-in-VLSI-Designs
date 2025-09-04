@@ -2,7 +2,16 @@ import os
 
 
 class FParser:
+    """
+    Parses Bookshelf-format benchmark files (.pl, .nodes, .nets, .scl) for VLSI designs.
+    Provides methods to extract cells, nets, and rows from the benchmark folder.
+    """
     def __init__(self, folder_path: str):
+        """
+        Initialize the FParser object.
+        Args:
+            folder_path (str): Path to the benchmark folder containing Bookshelf files.
+        """
         dname = os.path.basename(folder_path)
         if "_" in dname:
             dname = dname.split("_")
@@ -14,6 +23,11 @@ class FParser:
         self.sclfile = f"{folder_path}/{dname}.scl"
 
     def read_cells(self):
+        """
+        Parse and return all cell information from .pl and .nodes files.
+        Returns:
+            dict: Mapping of cell names to their attributes (position, orientation, dimensions, type).
+        """
         cells = {}
 
         with open(self.plfile, 'r') as file:
@@ -62,6 +76,11 @@ class FParser:
         return cells
 
     def read_nets(self):
+        """
+        Parse and return all net information from the .nets file.
+        Returns:
+            dict: Mapping of net names to lists of connected cell names.
+        """
         net_counter = -1
         nets = {}
 
@@ -79,6 +98,11 @@ class FParser:
         return nets
 
     def read_rows(self):
+        """
+        Parse and return all row information from the .scl file.
+        Returns:
+            dict: Mapping of row indices to row attributes (coordinates, height, spacing, etc.).
+        """
         rows = {}
         row_count = -1
 

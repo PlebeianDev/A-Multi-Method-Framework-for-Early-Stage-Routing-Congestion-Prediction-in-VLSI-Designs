@@ -1,7 +1,14 @@
 class Cell:
+    """
+    Represents a cell (standard cell, macro, or pin) in a VLSI design.
+    Stores attributes parsed from benchmark files and calculated properties.
+    """
     counter = -1
 
     def __init__(self):
+        """
+        Initialize a Cell object with default attributes.
+        """
         Cell.counter += 1
         self.id = Cell.counter
 
@@ -25,6 +32,11 @@ class Cell:
         self.pin_counter = 0
 
     def __str__(self):
+        """
+        String representation of the Cell object, showing key attributes.
+        Returns:
+            str: Formatted string with cell details.
+        """
         s = (f"=== cell: {self.name} ===\n"
              f"ly: {self.ly}, lx: {self.lx}, hy: {self.hy}, rx: {self.rx}\n"
              f"w: {self.w}, h: {self.h}\n"
@@ -34,6 +46,12 @@ class Cell:
         return s
 
     def generate_cell(self, name: str, fl: list):
+        """
+        Populate the cell's attributes from parsed file data.
+        Args:
+            name (str): Cell name.
+            fl (list): List of attributes (position, orientation, dimensions, type).
+        """
         self.name = name
         self.lx = fl[0]
         self.ly = fl[1]

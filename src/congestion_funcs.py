@@ -13,7 +13,17 @@ from c_benchmark import Benchmark
 
 
 class CongestionEstimator:
+    """
+    Estimates routing congestion in VLSI designs using multiple methods.
+    Supports pin-density, standard net demand, fanout-weighted, Rent's Rule, and net-span approaches.
+    """
     def __init__(self, d: Benchmark, grid_size=10):
+        """
+        Initialize the CongestionEstimator.
+        Args:
+            d (Benchmark): The parsed benchmark design object.
+            grid_size (int): The size of each grid cell in microns.
+        """
         self.design = d
         self.grid_size = grid_size
         self.routing_grid = None
@@ -21,7 +31,10 @@ class CongestionEstimator:
         self.runtimes = {}
 
     def build_routing_grid(self):
-        """Create a routing grid over the die area"""
+        """
+        Create a routing grid over the die area.
+        Initializes a 2D grid structure to store congestion-related metrics for each cell.
+        """
 
         x_bins = int((self.design.rx - self.design.lx) / self.grid_size) + 1
         y_bins = int((self.design.hy - self.design.ly) / self.grid_size) + 1
@@ -42,7 +55,10 @@ class CongestionEstimator:
         }
 
     def calculate_pin_density(self):
-        """Calculate pin density for each grid cell"""
+        """
+        Calculate pin density for each grid cell.
+        Distributes the number of pins in each cell across overlapping grid cells.
+        """
         if not self.routing_grid:
             self.build_routing_grid()
 
@@ -63,7 +79,13 @@ class CongestionEstimator:
                         self.routing_grid['cells'][col][row]['pin_density'] += pins_per_cell
 
     def _process_net_demand(self, net, weight, demand_key):
-        """Helper method to process net demand"""
+        """
+        Helper method to process net demand for a given net.
+        Args:
+            net: Net object.
+            weight (float): Weight to apply to the net's demand.
+            demand_key (str): Key in the grid cell dict to update.
+        """
         if not net.cells:
             return
 
@@ -77,7 +99,10 @@ class CongestionEstimator:
                 self.routing_grid['cells'][col][row][demand_key] += weight
 
     def estimate_net_demand_standard(self):
-        """Original method: all nets contribute equally"""
+        """
+        Estimate net demand using the standard method (all nets contribute equally).
+        Updates the routing grid with standard net demand values.
+        """
         start_time = time.time()
         if not self.routing_grid:
             self.build_routing_grid()
@@ -86,7 +111,10 @@ class CongestionEstimator:
         self.runtimes['standard'] = time.time() - start_time
 
     def estimate_net_demand_weighted(self):
-        """Weight nets by fanout (log scale)"""
+        """
+        Estimate net demand weighted by net fanout (log scale).
+        Updates the routing grid with fanout-weighted net demand values.
+        """
         start_time = time.time()
         if not self.routing_grid:
             self.build_routing_grid()
@@ -97,6 +125,10 @@ class CongestionEstimator:
         self.runtimes['weighted'] = time.time() - start_time
 
     def estimate_rents_rule(self):
+        """
+        Estimate congestion using Rent's Rule.
+        Applies an empirical model to estimate wiring demand per cell.
+        """
         start_time = time.time()
         if not self.routing_grid:
             self.build_routing_grid()
@@ -118,7 +150,10 @@ class CongestionEstimator:
         self.runtimes['rents'] = time.time() - start_time
 
     def estimate_net_span(self):
-        """Net span-based congestion estimation"""
+        """
+        Estimate congestion based on the Manhattan span of each net.
+        Updates the routing grid with net span-based demand values.
+        """
         start_time = time.time()
         if not self.routing_grid:
             self.build_routing_grid()
@@ -137,7 +172,11 @@ class CongestionEstimator:
         self.runtimes['span'] = time.time() - start_time
 
     def generate_all_congestion_maps(self):
-        """Generate congestion maps for all methods with proper normalization"""
+        """
+        Generate congestion maps for all implemented methods with normalization.
+        Returns:
+            dict: Congestion maps for each method.
+        """
         self.calculate_pin_density()
         self.estimate_net_demand_standard()
         self.estimate_net_demand_weighted()
@@ -160,11 +199,6 @@ class CongestionEstimator:
             'span': 'span_demand'
         }
 
-        """
-        TODOS: 
-        1. see if the fix values must be altered later for experimentation
-        2. Might provide error, see cells and dictionaries accordingly
-        """
         for name, demand_key in methods.items():
             congestion_map = {
                 **self.routing_grid,
@@ -180,14 +214,27 @@ class CongestionEstimator:
     
 
 class CongestionVisualizer:
+    """
+    Visualizes congestion maps using matplotlib.
+    Provides methods for 4-way comparison and single map plotting.
+    """
     def __init__(self, design_data):
+        """
+        Initialize the CongestionVisualizer.
+        Args:
+            design_data: The design or benchmark data for visualization context.
+        """
         self.design = design_data
         self.cmap = LinearSegmentedColormap.from_list(
             'congestion', ['green', 'yellow', 'red']
         )
 
     def plot_4way_comparison(self, maps):
-        """4-way comparison of all methods"""
+        """
+        Plot a 4-way comparison of all congestion estimation methods.
+        Args:
+            maps (dict): Dictionary of congestion maps for each method.
+        """
         plt.figure(figsize=(16,12))
         titles = [
             "Standard (Uniform Nets)",
@@ -205,7 +252,11 @@ class CongestionVisualizer:
         plt.show()
     
     def _plot_single_map(self, congestion_map):
-        """Plot single congestion map"""
+        """
+        Plot a single congestion map as a heatmap.
+        Args:
+            congestion_map (dict): Congestion map to plot.
+        """
         rows = congestion_map['y_bins']
         cols = congestion_map['x_bins']
         data = np.zeros((rows, cols))
@@ -225,12 +276,25 @@ class CongestionVisualizer:
 
     
 class CongestionAnalyzer:
+    """
+    Analyzes and compares congestion maps, generating metrics and correlation matrices.
+    """
     def __init__(self, congestion_maps, runtimes):
+        """
+        Initialize the CongestionAnalyzer.
+        Args:
+            congestion_maps (dict): Congestion maps for each method.
+            runtimes (dict): Runtime information for each method.
+        """
         self.maps = congestion_maps
         self.runtimes = runtimes
     
     def generate_comparison_report(self):
-        """Generate comprehensive comparison metrics"""
+        """
+        Generate comprehensive comparison metrics and correlation matrix for all methods.
+        Returns:
+            dict: Contains metrics DataFrame and correlation DataFrame.
+        """
         metrics = []
         
         for method, cmap in self.maps.items():
@@ -264,7 +328,13 @@ class CongestionAnalyzer:
         }
         
 def setup_logging(log_file_path):
-    """Redirect stdout and stderr to a log file"""
+    """
+    Redirect stdout and stderr to a log file with a timestamp.
+    Args:
+        log_file_path (str): Directory path to save the log file.
+    Returns:
+        str: Path to the created log file.
+    """
     class Logger(object):
         def __init__(self, filename):
             self.terminal = sys.stdout

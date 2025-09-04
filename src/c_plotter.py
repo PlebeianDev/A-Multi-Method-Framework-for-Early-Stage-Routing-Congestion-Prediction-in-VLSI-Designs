@@ -4,11 +4,22 @@ from matplotlib import patches
 from c_benchmark import Benchmark
 
 class Plotter:
+    """
+    Provides static methods for visualizing VLSI design layouts using matplotlib.
+    """
     def __init__(self):
+        """
+        Initialize the Plotter object (no-op).
+        """
         pass
 
     @staticmethod
     def plot_design(benchmark: Benchmark):
+        """
+        Plot the design layout, including pins, cells, rows, and die area.
+        Args:
+            benchmark (Benchmark): The benchmark object containing design data.
+        """
         fig = plt.figure()
         ax = fig.add_subplot(111, aspect='equal', adjustable='datalim')
         for p in benchmark.pins.values():

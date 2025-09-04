@@ -7,7 +7,7 @@ from congestion_funcs import *
 
 
 def main():
-    path = "/home/plebeiandev/Documents/Benchmarks/Bookshelf_ISPD/adaptec3_eplace_placed_and_legalized"
+    path = ""  # Set your benchmark path here
     d = Benchmark(path)
     d.generate_benchmark()
     
